@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Scan a Git Repository</h2>
+    <form action="{{ url_for('scan_repository') }}" method="post">
+        <label for="repo_url">GitHub/GitLab/Bitbucket Repository URL:</label>
+        <input type="text" id="repo_url" name="repo_url" placeholder="e.g., https://github.com/owner/repo or https://gitlab.com/group/project" required style="width: 100%;">
+        <button type="submit" class="button button-primary">Start Scan</button>
+    </form>
+
+    {% if report_available %}
+    <p style="margin-top: 30px;">
+        <a href="{{ url_for('view_report') }}" class="button button-outline">View Last Scan Report</a>
+    </p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Security Scan Report</h2>
+    {% if report_content %}
+        <p>Report generated on: **{{ scan_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}**</p>
+        <div style="margin-bottom: 20px;">
+            <a href="{{ url_for('download_report') }}" class="button button-primary">Download Report (.md)</a>
+            <a href="{{ url_for('index') }}" class="button">New Scan</a>
+        </div>
+        
+        <div class="report-content" id="report-display">
+            <!-- Markdown content will be rendered here by JavaScript -->
+            <!-- We initially place it in a <pre> tag to make it accessible to marked.js -->
+            <pre style="display:none;">{{ report_content }}</pre>
+        </div>
+        
+        <!-- Include Marked.js for client-side Markdown rendering -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Get the raw markdown content from the hidden <pre> tag
+                const markdownContentElement = document.querySelector('#report-display pre');
+                if (markdownContentElement) {
+                    const markdownContent = markdownContentElement.textContent;
+                    // Render markdown to HTML and inject it into the display div
+                    document.getElementById('report-display').innerHTML = marked.parse(markdownContent);
+                } else {
+                    console.error("Markdown content element not found.");
+                }
+            });
+        </script>
+    {% else %}
+        <p>No report available. Please go back and start a scan.</p>
+        <p><a href="{{ url_for('index') }}" class="button">Go to Home</a></p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,6 @@
+GitPython
+python-dotenv
+langchain
+langchain-google-genai
+Flask
+gunicorn # For production deployment in Docker
