@@ -16,6 +16,10 @@ By leveraging **Google's OSV-Scanner** and **Gemini 2.5 Flash** (via LangChain),
 * **Comprehensive Reporting:** Generates detailed reports complete with risk explanations, suggested code fixes, and Mermaid.js pie charts.
 * **Export Options:** Download reports in raw Markdown (`.md`) or capture perfectly formatted PDFs directly from the browser.
 
+```
+**NOTE**: FOR PRIVATE REPO SET THE ENV TO FALSE AND PASS REQUIRED CREDENTIALS IN `.env` file
+```
+
 ---
 
 ## 📋 Prerequisites
@@ -60,7 +64,7 @@ pip install Flask langchain langchain-core langchain-google-genai python-dotenv 
 ```
 
 **4. Configure Environment Variables:**
-Create a `.env` file in the root directory of the project and add your Google API key:
+Create a `.env` copy all text form .env-sample file in the root directory of the project and add your Google API key:
 
 ```ini
 # .env
@@ -69,6 +73,9 @@ IS_PUBLIC_REPO="true"
 
 # (Optional) Add any GitHub/GitLab tokens if your git_handler.py requires them for private repos
 
+```
+```
+'**NOTE**': FOR PRIVATE REPO SET THE ENV TO FALSE AND PASS REQUIRED CREDENTIALS IN `.env` file
 ```
 
 ---

@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
+    <p style="font-size: 0.9em; color: #6a737d; margin-bottom: 20px; padding: 10px; border: 1px solid #e1e4e8; background-color: #f6f8fa; border-radius: 5px;">
+        <strong>Important Note:</strong> This tool utilizes a Large Language Model (LLM) to identify potential security risks. While it is highly capable, AI can produce false positives or miss complex, multi-file vulnerabilities. This tool is meant to assist developers and security researchers, not to replace professional security audits or dedicated SAST/DAST enterprise software.
+    </p>
+
     <h2>Scan a Git Repository</h2>
     <form action="{{ url_for('scan_repository') }}" method="post" onsubmit="this.querySelector('button[type=submit]').innerText='Starting...'; this.querySelector('button[type=submit]').disabled=true;">
         <label for="repo_url">GitHub/GitLab/Bitbucket Repository URL:</label>
-        <input type="text" id="repo_url" name="repo_url" placeholder="e.g., [https://github.com/owner/repo](https://github.com/owner/repo) or [https://gitlab.com/group/project](https://gitlab.com/group/project)" required style="width: 100%;">
+        <input type="text" id="repo_url" name="repo_url" placeholder="e.g., [https://github.com/owner/repo]" required style="width: 100%;">
         <button type="submit" class="button button-primary">Start Scan</button>
     </form>
 

@@ -1,0 +1,112 @@
+name: Build & Push to gcr.io via Cloud Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write   # required for OIDC to GCP
+
+env:
+  # === Required project settings ===
+  GCP_PROJECT_ID: proven-country-485607-p6    # set in GitHub "Repository variables"
+  GCP_PROJECT_NUMBER: 766156983150
+  WIF_POOL_ID: github-wif-pool    # e.g., github-actions-pool
+  WIF_PROVIDER_ID: github   # e.g., github-oidc
+
+  # === Image/repo settings ===
+  IMAGE_NAME: ${{ vars.IMAGE_NAME || 'repoguardui' }}
+  # gcr host to use: gcr.io | us.gcr.io | eu.gcr.io | asia.gcr.io
+  GCR_HOST: ${{ vars.GCR_HOST || 'gcr.io' }}
+
+  # Service Account to impersonate via OIDC (has roles/cloudbuild.builds.editor)
+  GCP_SA_EMAIL: github-wif-sa@proven-country-485607-p6.iam.gserviceaccount.com     
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) OIDC auth → short-lived creds
+      - id: auth
+        name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ env.WIF_POOL_ID }}/providers/${{ env.WIF_PROVIDER_ID }}
+          service_account: ${{ env.GCP_SA_EMAIL }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/cloud-platform
+
+      # 2) Install gcloud
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: ">= 466.0.0"
+
+      # 3) Enable required services (idempotent)
+      - name: Enable required APIs (Artifact Registry + Cloud Build)
+        run: |
+          set -euo pipefail
+          gcloud --quiet services enable \
+            artifactregistry.googleapis.com \
+            cloudbuild.googleapis.com \
+            cloudresourcemanager.googleapis.com
+        # AR is the modern registry; Cloud Build builds & pushes; RM API used by some AR checks. 
+        # GCR itself is deprecated for writes; AR handles gcr.io repos. 
+
+      # 4) Ensure gcr.io repository exists in Artifact Registry
+      #    - gcr.io  -> location "us"
+      #    - us.gcr.io -> "us", eu.gcr.io -> "europe", asia.gcr.io -> "asia"
+      - name: Ensure gcr.io-style repo exists in Artifact Registry
+        run: |
+          set -euo pipefail
+          case "${GCR_HOST}" in
+            gcr.io|us.gcr.io) AR_LOCATION="us"; AR_REPO="gcr.io";;
+            eu.gcr.io)        AR_LOCATION="europe"; AR_REPO="eu.gcr.io";;
+            asia.gcr.io)      AR_LOCATION="asia"; AR_REPO="asia.gcr.io";;
+            *) echo "Unsupported GCR_HOST=${GCR_HOST}"; exit 1;;
+          esac
+
+          echo "Using AR location: ${AR_LOCATION}, repository name: ${AR_REPO}"
+          if ! gcloud artifacts repositories describe "${AR_REPO}" --location="${AR_LOCATION}" >/dev/null 2>&1; then
+            echo "Creating Artifact Registry repo ${AR_REPO} in ${AR_LOCATION} (Docker format)..."
+            gcloud artifacts repositories create "${AR_REPO}" \
+              --location="${AR_LOCATION}" \
+              --repository-format=docker \
+              --description="Backs ${GCR_HOST} for this project"
+          else
+            echo "Repo ${AR_REPO} already exists in ${AR_LOCATION}"
+          fi
+
+      # 5) Enable gcr.io redirection so pushes to gcr.io go to Artifact Registry
+      - name: Enable gcr.io→Artifact Registry redirection (idempotent)
+        run: |
+          set -euo pipefail
+          gcloud artifacts settings enable-upgrade-redirection \
+            --project="${GCP_PROJECT_ID}" --quiet || true
+        # With redirection ON, pushes/pulls to gcr.io are handled by Artifact Registry.
+
+      # 6a) Compute short Git SHA tag
+      - name: Compute image tag (short SHA)
+        id: tag
+        run: echo "TAG=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
+      # 6b) Configure Docker to use gcloud as credential helper for gcr.io
+      - name: Configure Docker auth for gcr.io
+        run: |
+          set -euo pipefail
+          gcloud auth configure-docker ${GCR_HOST} --quiet
+
+      # 6c) Docker build & push directly to gcr.io (backed by Artifact Registry)
+      - name: Docker build & push (direct)
+        run: |
+          set -euo pipefail
+          IMAGE_REF="${GCR_HOST}/${GCP_PROJECT_ID}/${IMAGE_NAME}:${TAG}"
+          echo "Building ${IMAGE_REF} ..."
+          docker build -t "${IMAGE_REF}" --no-cache .
+          echo "Pushing ${IMAGE_REF} ..."
+          docker push "${IMAGE_REF}"
+          echo "pushed=${IMAGE_REF}" >> $GITHUB_OUTPUT
