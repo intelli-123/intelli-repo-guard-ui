@@ -1,5 +1,5 @@
 # Stage 1: Build osv-scanner
-FROM golang:1.22-alpine as gobuilder
+FROM golang:alpine3.23 as gobuilder
 
 # Install git, needed for go install to fetch modules
 RUN apk add --no-cache git
