@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Scanning Repository...</h2>
+    <p>Target: <strong>{{ repo_url }}</strong></p>
+
+    <div style="width: 100%; background-color: #f4f5f6; border: 1px solid #d1d1d1; border-radius: .4rem; overflow: hidden; margin: 20px 0;">
+        <div id="progress-bar" style="width: 0%; height: 25px; background-color: #9b4dca; transition: width 0.3s ease;"></div>
+    </div>
+
+    <p id="status-text" style="font-style: italic; color: #606c76;">Initializing connection...</p>
+
+    <script>
+        function checkScanStatus() {
+            fetch('/scan-status')
+                .then(response => response.json())
+                .then(data => {
+                    // Check for backend errors
+                    if (data.error) {
+                        document.getElementById('status-text').innerHTML = `<span style="color: #cc0000; font-weight: bold;">Error: ${data.error}</span><br><br><a href="/" class="button">Go Back</a>`;
+                        document.getElementById('progress-bar').style.backgroundColor = '#cc0000';
+                        return; // Stop polling
+                    }
+
+                    // Update UI
+                    document.getElementById('progress-bar').style.width = data.progress + '%';
+
+                    if (data.current_file) {
+                        document.getElementById('status-text').innerText = `Processing: ${data.current_file} (${data.progress}%)`;
+                    }
+
+                    // Check if finished
+                    if (!data.running && data.progress === 100) {
+                        document.getElementById('status-text').innerText = "Scan complete! Generating report...";
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('view_report') }}";
+                        }, 1000); // 1-second delay so the user sees the 100% bar
+                    } else {
+                        // Keep polling every 1 second
+                        setTimeout(checkScanStatus, 1000);
+                    }
+                })
+                .catch(err => {
+                    console.error("Error fetching status:", err);
+                    setTimeout(checkScanStatus, 2000); // Retry on temporary network failure
+                });
+        }
+
+        // Start polling a second after the page loads
+        setTimeout(checkScanStatus, 1000);
+    </script>
+{% endblock %}

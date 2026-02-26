@@ -2,9 +2,9 @@
 
 {% block content %}
     <h2>Scan a Git Repository</h2>
-    <form action="{{ url_for('scan_repository') }}" method="post">
+    <form action="{{ url_for('scan_repository') }}" method="post" onsubmit="this.querySelector('button[type=submit]').innerText='Starting...'; this.querySelector('button[type=submit]').disabled=true;">
         <label for="repo_url">GitHub/GitLab/Bitbucket Repository URL:</label>
-        <input type="text" id="repo_url" name="repo_url" placeholder="e.g., https://github.com/owner/repo or https://gitlab.com/group/project" required style="width: 100%;">
+        <input type="text" id="repo_url" name="repo_url" placeholder="e.g., [https://github.com/owner/repo](https://github.com/owner/repo) or [https://gitlab.com/group/project](https://gitlab.com/group/project)" required style="width: 100%;">
         <button type="submit" class="button button-primary">Start Scan</button>
     </form>
 

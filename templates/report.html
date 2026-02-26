@@ -5,28 +5,59 @@
         <p>Report generated on: **{{ scan_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}**</p>
         <div style="margin-bottom: 20px;">
             <a href="{{ url_for('download_report') }}" class="button button-primary">Download Report (.md)</a>
+
+            <button id="download-pdf-btn" class="button button-outline">Download Report (.pdf)</button>
+
             <a href="{{ url_for('index') }}" class="button">New Scan</a>
         </div>
-        
+
         <div class="report-content" id="report-display">
-            <!-- Markdown content will be rendered here by JavaScript -->
-            <!-- We initially place it in a <pre> tag to make it accessible to marked.js -->
             <pre style="display:none;">{{ report_content }}</pre>
         </div>
-        
-        <!-- Include Marked.js for client-side Markdown rendering -->
+
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Get the raw markdown content from the hidden <pre> tag
+                // 1. Render Markdown to HTML
                 const markdownContentElement = document.querySelector('#report-display pre');
                 if (markdownContentElement) {
                     const markdownContent = markdownContentElement.textContent;
-                    // Render markdown to HTML and inject it into the display div
                     document.getElementById('report-display').innerHTML = marked.parse(markdownContent);
                 } else {
                     console.error("Markdown content element not found.");
                 }
+
+                // 2. NEW: Handle PDF Download exactly as seen on screen
+                document.getElementById('download-pdf-btn').addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    const btn = this;
+                    const originalText = btn.innerText;
+                    btn.innerText = "Generating PDF..."; // UX feedback
+                    btn.disabled = true;
+
+                    // Target the div containing the rendered report
+                    const element = document.getElementById('report-display');
+
+                    // html2pdf configuration
+                    const opt = {
+                        margin:       0.5,
+                        // Use the python variable to name the file correctly
+                        filename:     '{{ report_filename }}'.replace('.md', '.pdf'),
+                        image:        { type: 'jpeg', quality: 0.98 },
+                        html2canvas:  { scale: 2, useCORS: true }, // High res
+                        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                    };
+
+                    // Generate and save the PDF, then reset the button
+                    html2pdf().set(opt).from(element).save().then(() => {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    });
+                });
             });
         </script>
     {% else %}
