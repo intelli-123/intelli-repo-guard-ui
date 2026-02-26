@@ -5,7 +5,7 @@ FROM golang:1.22-alpine as gobuilder
 RUN apk add --no-cache git
 
 # Install osv-scanner v2
-RUN go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest
+RUN go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.2.0
 
 
 # Stage 2: Final Production Image
